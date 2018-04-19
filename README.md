@@ -1,6 +1,6 @@
 Genetic Algorithm implemented for ANN 
 
-![Example on surface](https://i.imgur.com/DkcoOkH.png)
+![Imgur](https://i.imgur.com/i7rP0ur.png)
 
 Please see the notebook for sample code! :) 
 

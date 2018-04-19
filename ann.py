@@ -272,7 +272,7 @@ def crossmut(selection, mchance, msev, inh, verbose):
 
 def mutation(x):
     """Mutation function."""
-    return (x * 1.5) + random.choice([1, -1])
+    return x * random.choice([1.5, 1 / 1.5]) + random.choice([1, -1])
 
 
 def sigmoid(x):

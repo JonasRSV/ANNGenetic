@@ -42,7 +42,7 @@ network.add_layer(ann.Layer(2, act=ann.sigmoid))
 ga = ann.Genetic(10, verbose=False)
 ga.create_family(network)
 
-ri = np.array([1])
+ri = np.array([-10])
 
 fig = plt.figure()
 ax = fig.gca(projection='3d')
@@ -83,7 +83,7 @@ Z = function_to_maximize(X, Y)
 surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
                        linewidth=0, antialiased=True, alpha=0.4)
 
-ax.set_zlim(-1.01, 1)
+ax.set_zlim(-0.02, 0.01 )
 ax.zaxis.set_major_locator(LinearLocator(10))
 ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
