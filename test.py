@@ -17,6 +17,13 @@ generation_colors = ["#330000", "#880000", "#FF0000", "#333300", "#888800", "#FF
 generations = len(generation_colors)
 
 # Random Input for giggles
+# The input does not really matter in this case
+# The evolution algorithm is only dependant on the output
+# It will however optimize the input for the output so it's
+# rather useful for teaching stuff to play games :)
+# eg: create a network with one input per possible action
+# in the game and then evolve the network after each round
+# depending on the output.
 
 network = ann.ANN(1)
 
@@ -27,7 +34,12 @@ network.add_layer(ann.Layer(6, act=ann.sigmoid))
 network.add_layer(ann.Layer(2, act=ann.sigmoid))
 
 # 10 Family members
-ga = ann.Genetic(10)
+
+# There's a bunch of other options defaults is:
+#     def __init__(self, family_sz, selection_bias=0.75, verbose=True,
+#                 mutation_chance=0.5, mutation_severity=0.4, inheritance=0.4):
+
+ga = ann.Genetic(10, verbose=False)
 ga.create_family(network)
 
 ri = np.array([1])
@@ -35,22 +47,28 @@ ri = np.array([1])
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 
+evolution = 0
 for gc in generation_colors:
     xs, ys, zs = [], [], []
     evl = []
+    
+    best = 1000
     for member in ga:
         x, y = member.prop(ri)
         xs.append(x)
         ys.append(y)
         
         z = function_to_maximize(x, y)
-        
-        print(x, y, z)
         zs.append(z)
 
+        best = min(abs(best), z)
         evl.append(z)
     
     ga.evolve(evl)
+        
+    print("Evolution {}, best child {}".format(evolution, best))
+    
+    evolution += 1
     plt.scatter(xs, ys, zs=zs, s=30, c=gc)
 
 
@@ -63,12 +81,14 @@ Z = function_to_maximize(X, Y)
 
 # Plot the surface.
 surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
+                       linewidth=0, antialiased=True, alpha=0.4)
 
 ax.set_zlim(-1.01, 1)
 ax.zaxis.set_major_locator(LinearLocator(10))
 ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
 fig.colorbar(surf, shrink=0.5, aspect=5)
+
+print("Optimal Results would be 0 because the hyperbolic function reaches its maximum at 0")
 
 plt.show()
