@@ -2,7 +2,9 @@ import numpy as np
 import random
 import math
 from time import time
+from utils import mvectorize
 import sys
+
 
 ERR_MESSAGE = "The random selection method i've used \
 has failed, try to reduce the number of \
@@ -13,15 +15,22 @@ in the ann file or improve my selection function!"
 
 class Layer(object):
 
-    def __init__(self, con, act=lambda x: x, w = None):
+    def __init__(self, con, activation=lambda x: x, w = None):
         """
         Connections: con
         Activation Function: act
         """
         self.con = con
-        self.act = np.vectorize(act)
+
+        """Pre allocate vector, its major speedup."""
+        self.palloc_v = np.zeros(con)
+        self.palloc_mm = np.zeros(con)
+
+        self.a = mvectorize(activation, self.palloc_v)
+        self.activation = activation
 
         self.w = w
+
 
     def connect(self, pcon):
         """Set weigth matrix."""
@@ -29,15 +38,10 @@ class Layer(object):
 
         return self
 
-    def fprop(self, a):
+    def fprop(self, activations):
         """Propagate activations forward."""
-        timestamp = time()
-        print("W", self.w)
-        print("a", a)
-        b = self.act(self.w @ a)
-        print("b", b)
-        print("time {}".format(time() - timestamp))
-        return b
+        self.palloc_mm[:] = self.w @ activations
+        return self.a(self.palloc_mm)
 
 
 
@@ -102,7 +106,7 @@ class ANN(object):
         cnet = ANN(self.isz)
         for layer in self:
             wcopy = np.copy(layer.w)
-            clay = Layer(layer.con, layer.act, wcopy)
+            clay = Layer(layer.con, layer.activation, wcopy)
             cnet.network.append(clay)
 
         return cnet
@@ -139,7 +143,7 @@ class Genetic(object):
             member = ANN(network.isz)
 
             for layer in network:
-                m_layer = Layer(layer.con, layer.act)
+                m_layer = Layer(layer.con, layer.activation)
                 member.add_layer(m_layer)
 
             family.append(member)

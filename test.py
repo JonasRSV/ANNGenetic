@@ -8,7 +8,7 @@ from time import time
 
 
 def function_to_maximize(X, Y):
-    return -1 * (X**2 / 100 + Y**2 / 100)
+    return -1 * (X**2 + Y**2)
 
 
 generation_colors = ["#330000", "#880000", "#FF0000", "#333300", "#888800", "#FFFF00",
@@ -85,8 +85,8 @@ for _ in range(2):
 
 
 # Make data.
-X = np.arange(-5, 5, 0.25)
-Y = np.arange(-5, 5, 0.25)
+X = np.arange(-100, 100, 0.25)
+Y = np.arange(-100, 100, 0.25)
 X, Y = np.meshgrid(X, Y)
 Z = function_to_maximize(X, Y)
 
@@ -94,7 +94,7 @@ Z = function_to_maximize(X, Y)
 surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
                        linewidth=0, antialiased=True, alpha=0.4)
 
-ax.set_zlim(-10.02, 0.01 )
+ax.set_zlim(-400.02, 0.01 )
 ax.zaxis.set_major_locator(LinearLocator(10))
 ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
