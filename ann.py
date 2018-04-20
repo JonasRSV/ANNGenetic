@@ -31,7 +31,15 @@ class Layer(object):
 
     def fprop(self, a):
         """Propagate activations forward."""
-        return self.act(self.w @ a)
+        timestamp = time()
+        print("W", self.w)
+        print("a", a)
+        b = self.act(self.w @ a)
+        print("b", b)
+        print("time {}".format(time() - timestamp))
+        return b
+
+
 
 
 class ANN(object):
@@ -149,41 +157,51 @@ class Genetic(object):
 
         timestamp = time()
 
-        s = selection(self.family, 
-                      evl, 
-                      self.sb, 
+        s = selection(self.family,
+                      evl,
+                      self.sb,
                       self.verbose)
 
-        self.family = crossmut(s, 
-                               self.mchance, 
-                               self.msev, 
-                               self.inh, 
+        self.family = crossmut(s,
+                               self.mchance,
+                               self.msev,
+                               self.inh,
                                self.verbose)
 
         if self.verbose:
             print("Current Generation {}, evolution took: {}"
-                    .format(self.generation, time() - timestamp))
+                  .format(self.generation, time() - timestamp))
+
+        self.generation += 1
 
         return self
-
 
     def __iter__(self):
         return iter(self.family)
 
-    
+
 def selection(family, evl, sb, verbose):
     """
+    Select new family.
+
     Selection should be based on variation aswell as
     fitness, this current implementation only depends on fitness.
 
     A PR is welcome! :)
     """
     timestamp = time()
+    e = list(enumerate(evl))
+    e.sort(key=lambda x: x[1], reverse=True)
 
-    e = list(enumerate(evl)) 
-    e.sort(key = lambda x: x[1], reverse=True)
+    """
+    Take the two best to guarantee progress or atleast same,
+    when doing pure random i've noticed patches of regression,
+    want to avoid that.
+    """
+    sel = list(map(lambda x: family[x[0]], e[:2]))
+
     sp = []
-    for idx, (i, _) in enumerate(e):
+    for idx, (i, _) in enumerate(e[2:]):
         """
         Need a better solution for selecting a random element
         but without a uniform chance, this might use to much
@@ -197,28 +215,26 @@ def selection(family, evl, sb, verbose):
 
     https://www.youtube.com/watch?v=kHyNqSnzP8Y at around
     23:15
+
+    - 2 because the two already selected
     """
-
-    """Please make sure family is even."""
-    half = int(len(family) / 2)
-
+    half = int(len(family) / 2) - 2
 
     """This might be abit slow."""
-    s = []
     for _ in range(half):
         if len(sp) == 0:
             sys.stderr.write(ERR_MESSAGE)
             break
 
         choice = random.choice(sp)
-        s.append(family[choice])
+        sel.append(family[choice])
 
         sp = [x for x in sp if x != choice]
 
     if verbose:
         print("Selection: {}".format(time() - timestamp))
 
-    return s
+    return sel
 
 
 def crossmut(selection, mchance, msev, inh, verbose):
@@ -242,7 +258,6 @@ def crossmut(selection, mchance, msev, inh, verbose):
 
     if grps % 2 == 1:
         b.append((selection[0], selection[-1]))
-
 
     family = []
     """Don't mind the variable name choices."""

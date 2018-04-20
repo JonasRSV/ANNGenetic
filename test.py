@@ -4,15 +4,16 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import numpy as np
 import ann
+from time import time
 
 
 def function_to_maximize(X, Y):
-    return -1 * (X**2 / 40 + Y**2 / 40)
+    return -1 * (X**2 / 100 + Y**2 / 100)
 
 
 generation_colors = ["#330000", "#880000", "#FF0000", "#333300", "#888800", "#FFFF00",
                      "#333333", "#888888", "#330033", "#880088", "#FF00FF", "#008800",
-                     "#00FF00", "#000088", "#0000FF"]
+                     "#00FF00", "#000088", "#0000FF", "#000000"]
 
 generations = len(generation_colors)
 
@@ -28,10 +29,10 @@ generations = len(generation_colors)
 network = ann.ANN(1)
 
 # Some Layers so that the network can learn
-network.add_layer(ann.Layer(6, act=ann.sigmoid))
+network.add_layer(ann.Layer(6))
 
 # Output, Should eventually become 0, 0 since that maximizes the function
-network.add_layer(ann.Layer(2, act=ann.sigmoid))
+network.add_layer(ann.Layer(2))
 
 # 10 Family members
 
@@ -39,7 +40,7 @@ network.add_layer(ann.Layer(2, act=ann.sigmoid))
 #     def __init__(self, family_sz, selection_bias=0.75, verbose=True,
 #                 mutation_chance=0.5, mutation_severity=0.4, inheritance=0.4):
 
-ga = ann.Genetic(10, verbose=False)
+ga = ann.Genetic(10)
 ga.create_family(network)
 
 ri = np.array([-10])
@@ -48,28 +49,38 @@ fig = plt.figure()
 ax = fig.gca(projection='3d')
 
 evolution = 0
-for gc in generation_colors:
-    xs, ys, zs = [], [], []
-    evl = []
-    
-    best = 1000
-    for member in ga:
-        x, y = member.prop(ri)
-        xs.append(x)
-        ys.append(y)
-        
-        z = function_to_maximize(x, y)
-        zs.append(z)
+xs = []
+ys = []
+zs = []
+for _ in range(2):
+    for gc in generation_colors:
+        evl = []
 
-        best = min(abs(best), z)
-        evl.append(z)
-    
-    ga.evolve(evl)
-        
-    print("Evolution {}, best child {}".format(evolution, best))
-    
-    evolution += 1
-    plt.scatter(xs, ys, zs=zs, s=30, c=gc)
+        abz = 1000
+        bestz = None
+        bestx = None
+        besty = None
+
+        for member in ga:
+            timestamp = time()
+            x, y = member.prop(ri)
+
+            z = function_to_maximize(x, y)
+            if abs(z) < abs(abz):
+                abz = abs(z)
+                bestz = z
+                bestx = x
+                besty = y
+
+            evl.append(z)
+
+        ga.evolve(evl)
+
+        print("Evolution {}, best child {}".format(evolution, bestz))
+
+        evolution += 1
+
+        plt.scatter([bestx], [besty], zs=[bestz], s=30, c=gc)
 
 
 
@@ -83,7 +94,7 @@ Z = function_to_maximize(X, Y)
 surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
                        linewidth=0, antialiased=True, alpha=0.4)
 
-ax.set_zlim(-0.02, 0.01 )
+ax.set_zlim(-10.02, 0.01 )
 ax.zaxis.set_major_locator(LinearLocator(10))
 ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
