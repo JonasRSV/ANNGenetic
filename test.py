@@ -30,6 +30,7 @@ network = ann.ANN(1)
 
 # Some Layers so that the network can learn
 network.add_layer(ann.Layer(6))
+network.add_layer(ann.Layer(8))
 
 # Output, Should eventually become 0, 0 since that maximizes the function
 network.add_layer(ann.Layer(2))
@@ -40,7 +41,7 @@ network.add_layer(ann.Layer(2))
 #     def __init__(self, family_sz, selection_bias=0.75, verbose=True,
 #                 mutation_chance=0.5, mutation_severity=0.4, inheritance=0.4):
 
-ga = ann.Genetic(10)
+ga = ann.Genetic(20, verbose=False)
 ga.create_family(network)
 
 ri = np.array([-10])
@@ -48,15 +49,16 @@ ri = np.array([-10])
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 
+timestamp = time()
 evolution = 0
 xs = []
 ys = []
 zs = []
-for _ in range(2):
+for _ in range(3):
     for gc in generation_colors:
         evl = []
 
-        abz = 1000
+        abz = 10000
         bestz = None
         bestx = None
         besty = None
@@ -75,7 +77,6 @@ for _ in range(2):
             evl.append(z)
 
         ga.evolve(evl)
-
         print("Evolution {}, best child {}".format(evolution, bestz))
 
         evolution += 1
@@ -84,6 +85,7 @@ for _ in range(2):
 
 
 
+print("Time to evolve: {}".format(time() - timestamp))
 # Make data.
 X = np.arange(-100, 100, 0.25)
 Y = np.arange(-100, 100, 0.25)
@@ -103,3 +105,4 @@ fig.colorbar(surf, shrink=0.5, aspect=5)
 print("Optimal Results would be 0 because the hyperbolic function reaches its maximum at 0")
 
 plt.show()
+

@@ -81,25 +81,24 @@ class ANN(object):
                 self.network[i].w[hinh][winh] = ws[hinh][winh]
 
         return self
-                
-    def mutate(self, mutation, degree=0.4):
+
+    def mutate(self, m, degree=0.4):
         """Mutate self degree amount."""
         for layer in self.network:
-            ws = layer.w
 
-            (h, w) = ws.shape
-            for _ in range(int(ws.size * degree)):
+            (h, w) = layer.w.shape
+            for _ in range(int(layer.w.size * degree)):
                 hinh = int(np.random.rand() * h)
                 winh = int(np.random.rand() * w)
 
-                ws[hinh][winh] = mutation(ws[hinh][winh])
+                layer.w[hinh][winh] = m(layer.w[hinh][winh])
 
         return self
 
     def deep_copy(self):
         """
         Deep copy itself.
-        
+
         used when breeding children so that
         mutability don't fuck shit up.
         """
@@ -110,7 +109,7 @@ class ANN(object):
             cnet.network.append(clay)
 
         return cnet
-    
+
     def __iter__(self):
         return iter(self.network)
 
@@ -118,7 +117,7 @@ class ANN(object):
 class Genetic(object):
 
     def __init__(self, family_sz, selection_bias=0.75, verbose=True,
-                 mutation_chance=0.5, mutation_severity=0.4, inheritance=0.4):
+                 mutation_chance=0.9, mutation_severity=0.4, inheritance=0.4):
 
         self.family_sz = family_sz
         self.sb = selection_bias
@@ -202,16 +201,16 @@ def selection(family, evl, sb, verbose):
     when doing pure random i've noticed patches of regression,
     want to avoid that.
     """
-    sel = list(map(lambda x: family[x[0]], e[:2]))
+    sel = [family[e[0][0]]]
 
     sp = []
-    for idx, (i, _) in enumerate(e[2:]):
+    for idx, (i, _) in enumerate(e[1:]):
         """
         Need a better solution for selecting a random element
         but without a uniform chance, this might use to much
         memory.
         """
-        chance = int(10000 * pow(1 - sb, idx) * sb)
+        chance = int(100000 * pow(1 - sb, idx) * sb)
         sp.extend([i] * chance)
 
     """
@@ -222,7 +221,7 @@ def selection(family, evl, sb, verbose):
 
     - 2 because the two already selected
     """
-    half = int(len(family) / 2) - 2
+    half = int(len(family) / 2) - 1
 
     """This might be abit slow."""
     for _ in range(half):
@@ -272,10 +271,10 @@ def crossmut(selection, mchance, msev, inh, verbose):
         kid1.inheritws(dad, inh)
         kid2.inheritws(mom, inh)
 
-        if np.random.rand() > mchance:
+        if np.random.rand() < mchance:
             kid1.mutate(mutation, msev)
 
-        if np.random.rand() > mchance:
+        if np.random.rand() < mchance:
             kid2.mutate(mutation, msev)
 
         family.append(kid1)
@@ -291,42 +290,9 @@ def crossmut(selection, mchance, msev, inh, verbose):
 
 def mutation(x):
     """Mutation function."""
-    return x * random.choice([1.5, 1 / 1.5]) + random.choice([1, -1])
+    return x + np.random.rand() * random.choice([1, -1])
 
 
 def sigmoid(x):
     return 1 / (1 + math.exp(-x))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
 
