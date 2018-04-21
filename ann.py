@@ -129,7 +129,6 @@ class Genetic(object):
         This family of members will be used in
         the selection.
         """
-
         family = []
         for _ in range(self.family_sz):
             member = ANN(network.isz)
@@ -144,6 +143,8 @@ class Genetic(object):
 
     def evolve(self, evl):
         """
+        Evolve.
+
         It's hard to implement a general eval algorithm for
         all kinds of problems thus i believe it's easier
         if the user just provides the evaluations.
@@ -229,7 +230,6 @@ def selection(family, evl, sb, verbose):
         items -= 1
         sts -= 1
 
-
     if verbose:
         print("Selection: {}".format(time() - timestamp))
 
@@ -238,29 +238,35 @@ def selection(family, evl, sb, verbose):
 
 def crossmut(selection, mchance, msev, inh, verbose):
     """
-    Double population again after selection
+    Double population again after selection.
     by breeding children and applying mutation.
 
     Shuffle list to cause random breeding.
     """
     timestamp = time()
+
+    """Maybe this is slow?."""
     random.shuffle(selection)
 
-    b = []
+    """Select Breeding Pairs."""
     grps = len(selection)
     bgs = int(grps / 2)
+
+    """Pre Alloc."""
+    bps = [None] * int(grps / 2 + 0.5)
     for i in range(bgs):
         j = i * 2
 
         if j + 1 < grps:
-            b.append((selection[j], selection[j + 1]))
+            bps[i] = (selection[j], selection[j + 1])
 
-    if grps % 2 == 1:
-        b.append((selection[0], selection[-1]))
+    if bps[-1] is None:
+        bps[-1] = (selection[0], selection[-1])
 
+    """Breed."""
     family = []
     """Don't mind the variable name choices."""
-    for mom, dad in b:
+    for mom, dad in bps:
         kid1 = mom.deep_copy()
         kid2 = dad.deep_copy()
 
