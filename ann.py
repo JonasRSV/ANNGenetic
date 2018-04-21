@@ -2,7 +2,6 @@ import numpy as np
 import random
 import math
 from time import time
-from utils import mvectorize
 import sys
 
 
@@ -23,14 +22,10 @@ class Layer(object):
         self.con = con
 
         """Pre allocate vector, its major speedup."""
-        self.palloc_v = np.zeros(con)
         self.palloc_mm = np.zeros(con)
 
-        self.a = mvectorize(activation, self.palloc_v)
         self.activation = activation
-
         self.w = w
-
 
     def connect(self, pcon):
         """Set weigth matrix."""
@@ -41,9 +36,7 @@ class Layer(object):
     def fprop(self, activations):
         """Propagate activations forward."""
         self.palloc_mm[:] = self.w @ activations
-        return self.a(self.palloc_mm)
-
-
+        return self.activation(self.palloc_mm)
 
 
 class ANN(object):
@@ -67,7 +60,7 @@ class ANN(object):
             a = layer.fprop(a)
 
         return a
-    
+
     def inheritws(self, ann, degree=0.4):
         """Inherit degree amount of weigths."""
         for i, l in enumerate(ann):
@@ -116,7 +109,7 @@ class ANN(object):
 
 class Genetic(object):
 
-    def __init__(self, family_sz, selection_bias=0.75, verbose=True,
+    def __init__(self, family_sz, selection_bias=0.5, verbose=True,
                  mutation_chance=0.9, mutation_severity=0.4, inheritance=0.4):
 
         self.family_sz = family_sz
@@ -193,51 +186,54 @@ def selection(family, evl, sb, verbose):
     A PR is welcome! :)
     """
     timestamp = time()
-    e = list(enumerate(evl))
-    e.sort(key=lambda x: x[1], reverse=True)
+    eo = list(enumerate(evl))
 
-    """
-    Take the two best to guarantee progress or atleast same,
-    when doing pure random i've noticed patches of regression,
-    want to avoid that.
-    """
-    sel = [family[e[0][0]]]
+    """Evaluation Order."""
+    eo.sort(key=lambda x: x[1], reverse=True)
 
-    sp = []
-    for idx, (i, _) in enumerate(e[1:]):
-        """
-        Need a better solution for selecting a random element
-        but without a uniform chance, this might use to much
-        memory.
-        """
-        chance = int(100000 * pow(1 - sb, idx) * sb)
-        sp.extend([i] * chance)
+    """Remove fitness not needed after order is decided."""
+    eo = list(map(lambda x: x[0], eo))
 
-    """
-    chance is based on rank space from
+    """Children to Select."""
+    sts = int(len(eo) / 2)
 
-    https://www.youtube.com/watch?v=kHyNqSnzP8Y at around
-    23:15
+    """Shelter the best from chance to avoid regression."""
+    s = [family[eo[0]]]
+    eo = eo[1:]
 
-    - 2 because the two already selected
-    """
-    half = int(len(family) / 2) - 1
+    """Prealloc. This is major speedup when family is HUGE."""
+    items = len(eo)
+    cache = [None] * len(eo)
 
-    """This might be abit slow."""
-    for _ in range(half):
-        if len(sp) == 0:
-            sys.stderr.write(ERR_MESSAGE)
-            break
+    while sts:
+        for i in range(items):
 
-        choice = random.choice(sp)
-        sel.append(family[choice])
+            """Rank Space."""
+            chance = pow(1 - sb, i) * sb
 
-        sp = [x for x in sp if x != choice]
+            if i == items - 1:
+                """Take best rather than worst."""
+                s.append(family[eo[0]])
+                cache = cache[1:]
+                break
+
+            elif np.random.rand() < chance:
+                s.append(family[eo[i]])
+                cache[i:] = eo[i + 1:]
+                break
+
+            else:
+                cache[i] = eo[i]
+
+        eo[:] = cache[:]
+        items -= 1
+        sts -= 1
+
 
     if verbose:
         print("Selection: {}".format(time() - timestamp))
 
-    return sel
+    return s
 
 
 def crossmut(selection, mchance, msev, inh, verbose):
@@ -294,5 +290,6 @@ def mutation(x):
 
 
 def sigmoid(x):
-    return 1 / (1 + math.exp(-x))
+    """Vectorized sigmoid."""
+    return 1 / (1 + np.exp(-x))
 
