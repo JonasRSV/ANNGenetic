@@ -29,7 +29,7 @@ class Layer(object):
 
     def connect(self, pcon):
         """Set weigth matrix."""
-        self.w = np.random.rand(self.con, pcon)
+        self.w = np.random.rand(self.con, pcon) * 2 - 1
 
         return self
 
@@ -121,8 +121,8 @@ class Genetic(object):
         self.verbose = verbose
 
         self.generation = 0
-	
-	self.apex = None
+        
+        self.apex = None
 
     def create_family(self, network):
         """
@@ -157,9 +157,9 @@ class Genetic(object):
         timestamp = time()
 
         s, self.apex  = selection(self.family,
-				  evl,
-				  self.sb,
-				  self.verbose)
+                                  evl,
+                                  self.sb,
+                                  self.verbose)
 
         self.family = crossmut(s,
                                self.mchance,
@@ -210,7 +210,7 @@ def selection(family, evl, sb, verbose):
     eo = eo[1:]
 
     """Store copy of best."""
-    apex = s.deep_copy()
+    apex = best.deep_copy()
 
     """Prealloc. This is major speedup when family is HUGE."""
     items = len(eo)
@@ -302,7 +302,7 @@ def crossmut(selection, mchance, msev, inh, verbose):
 
 def mutation(x):
     """Mutation function."""
-    return x + np.random.rand() * random.choice([1, -1])
+    return x + np.random.rand() * 2 - 1
 
 
 def sigmoid(x):
