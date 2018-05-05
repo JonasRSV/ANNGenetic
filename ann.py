@@ -121,6 +121,8 @@ class Genetic(object):
         self.verbose = verbose
 
         self.generation = 0
+	
+	self.apex = None
 
     def create_family(self, network):
         """
@@ -154,10 +156,10 @@ class Genetic(object):
 
         timestamp = time()
 
-        s = selection(self.family,
-                      evl,
-                      self.sb,
-                      self.verbose)
+        s, self.apex  = selection(self.family,
+				  evl,
+				  self.sb,
+				  self.verbose)
 
         self.family = crossmut(s,
                                self.mchance,
@@ -197,10 +199,18 @@ def selection(family, evl, sb, verbose):
 
     """Children to Select."""
     sts = int(len(eo) / 2)
+    
+    """Best child."""
+    best = family[eo[0]]
 
     """Shelter the best from chance to avoid regression."""
-    s = [family[eo[0]]]
+    s = [best]
+
+    """Select from rest."""
     eo = eo[1:]
+
+    """Store copy of best."""
+    apex = s.deep_copy()
 
     """Prealloc. This is major speedup when family is HUGE."""
     items = len(eo)
@@ -233,7 +243,7 @@ def selection(family, evl, sb, verbose):
     if verbose:
         print("Selection: {}".format(time() - timestamp))
 
-    return s
+    return s, apex
 
 
 def crossmut(selection, mchance, msev, inh, verbose):
