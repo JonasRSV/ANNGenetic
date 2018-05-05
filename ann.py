@@ -4,14 +4,6 @@ import math
 from time import time
 import sys
 
-
-ERR_MESSAGE = "The random selection method i've used \
-has failed, try to reduce the number of \
-family members or increase the number at \
-the chance variable in the selection function \
-in the ann file or improve my selection function!"
-
-
 class Layer(object):
 
     def __init__(self, con, activation=lambda x: x, w = None):
@@ -37,6 +29,15 @@ class Layer(object):
         """Propagate activations forward."""
         self.palloc_mm[:] = self.w @ activations
         return self.activation(self.palloc_mm)
+        
+    def __sub__(self, layer): 
+        return np.sum(self.w - layer.w)
+
+    def __add__(self, layer):
+        return np.sum(self.w + layer.w)
+        
+    def value(self):
+        return np.sum(self.w)
 
 
 class ANN(object):
@@ -106,11 +107,28 @@ class ANN(object):
     def __iter__(self):
         return iter(self.network)
 
+    def __sub__(self, network):
+        diff = 0
+        for n1, n2 in zip(self, network): 
+                diff += n1 - n2
+
+        return diff
+
+    def __add__(self, network):
+        ssum = 0
+        for n1, n2 in zip(self, network): 
+                ssum += n1 + n2
+
+        return ssum
+
+
+
 
 class Genetic(object):
 
     def __init__(self, family_sz, selection_bias=0.5, verbose=True,
-                 mutation_chance=0.9, mutation_severity=0.4, inheritance=0.4):
+                 mutation_chance=0.9, mutation_severity=0.4, inheritance=0.4
+                 , children_to_select=0.1):
 
         self.family_sz = family_sz
         self.sb = selection_bias
@@ -119,6 +137,7 @@ class Genetic(object):
         self.msev = mutation_severity
         self.inh = inheritance
         self.verbose = verbose
+        self.cts = children_to_select
 
         self.generation = 0
         
@@ -153,18 +172,19 @@ class Genetic(object):
 
         this evaluation is commonly called the fitness function.
         """
-
         timestamp = time()
 
         s, self.apex  = selection(self.family,
                                   evl,
                                   self.sb,
-                                  self.verbose)
+                                  self.verbose,
+                                  self.cts)
 
         self.family = crossmut(s,
                                self.mchance,
                                self.msev,
                                self.inh,
+                               self.family_sz,
                                self.verbose)
 
         if self.verbose:
@@ -179,7 +199,7 @@ class Genetic(object):
         return iter(self.family)
 
 
-def selection(family, evl, sb, verbose):
+def selection(family, evl, sb, verbose, cts):
     """
     Select new family.
 
@@ -189,16 +209,27 @@ def selection(family, evl, sb, verbose):
     A PR is welcome! :)
     """
     timestamp = time()
-    eo = list(enumerate(evl))
+    evl = np.array(evl)
+
+    """Mean child."""
+    mean = sum([sum([l.value() for l in v]) for v in family]) / len(family)
+
+    """Variances."""
+    variances = np.array([sum([l.value() for l in v]) - mean for v in family])
+
+    """Negative variance sux."""
+    variances = np.sqrt(variances * variances)
 
     """Evaluation Order."""
+    eo = list(enumerate(evl))
     eo.sort(key=lambda x: x[1], reverse=True)
 
     """Remove fitness not needed after order is decided."""
     eo = list(map(lambda x: x[0], eo))
 
     """Children to Select."""
-    sts = int(len(eo) / 2)
+    ctsF = int(len(eo) * cts * 0.8)
+    ctsV = int(len(eo) * cts * 0.2)
     
     """Best child."""
     best = family[eo[0]]
@@ -212,11 +243,10 @@ def selection(family, evl, sb, verbose):
     """Store copy of best."""
     apex = best.deep_copy()
 
-    """Prealloc. This is major speedup when family is HUGE."""
-    items = len(eo)
     cache = [None] * len(eo)
-
-    while sts:
+    items = len(eo)
+    """Select on fitness."""
+    while ctsF:
         for i in range(items):
 
             """Rank Space."""
@@ -238,7 +268,34 @@ def selection(family, evl, sb, verbose):
 
         eo[:] = cache[:]
         items -= 1
-        sts -= 1
+        ctsF -= 1
+
+    cache = [None] * len(eo)
+    items = len(eo)
+    """select on variance."""
+    while ctsV:
+        for i in range(items):
+
+            """Rank Space."""
+            chance = pow(1 - sb, i) * sb
+
+            if i == items - 1:
+                """Take best rather than worst."""
+                s.append(family[eo[0]])
+                cache = cache[1:]
+                break
+
+            elif np.random.rand() < chance:
+                s.append(family[eo[i]])
+                cache[i:] = eo[i + 1:]
+                break
+
+            else:
+                cache[i] = eo[i]
+
+        eo[:] = cache[:]
+        items -= 1
+        ctsV -= 1
 
     if verbose:
         print("Selection: {}".format(time() - timestamp))
@@ -246,7 +303,7 @@ def selection(family, evl, sb, verbose):
     return s, apex
 
 
-def crossmut(selection, mchance, msev, inh, verbose):
+def crossmut(selection, mchance, msev, inh, sz, verbose):
     """
     Double population again after selection.
     by breeding children and applying mutation.
@@ -255,28 +312,12 @@ def crossmut(selection, mchance, msev, inh, verbose):
     """
     timestamp = time()
 
-    """Maybe this is slow?."""
-    random.shuffle(selection)
-
-    """Select Breeding Pairs."""
-    grps = len(selection)
-    bgs = int(grps / 2)
-
-    """Pre Alloc."""
-    bps = [None] * int(grps / 2 + 0.5)
-    for i in range(bgs):
-        j = i * 2
-
-        if j + 1 < grps:
-            bps[i] = (selection[j], selection[j + 1])
-
-    if bps[-1] is None:
-        bps[-1] = (selection[0], selection[-1])
-
-    """Breed."""
     family = []
-    """Don't mind the variable name choices."""
-    for mom, dad in bps:
+    members = len(selection)
+    while members < sz:
+        mom = random.choice(selection)
+        dad = random.choice(selection)
+
         kid1 = mom.deep_copy()
         kid2 = dad.deep_copy()
 
@@ -291,6 +332,8 @@ def crossmut(selection, mchance, msev, inh, verbose):
 
         family.append(kid1)
         family.append(kid2)
+        
+        members += 2
 
     family.extend(selection)
 
