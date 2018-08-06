@@ -58,7 +58,7 @@ for _ in range(3):
     for gc in generation_colors:
         evl = []
 
-        abz = 10000
+        abz = 100000000
         bestz = None
         bestx = None
         besty = None
